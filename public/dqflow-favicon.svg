@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="DQflow favicon">
+
+<defs>
+  <linearGradient id="tealGrad" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#5EE3E2"/>
+    <stop offset="100%" stop-color="#27B8B6"/>
+  </linearGradient>
+  <clipPath id="circleClip">
+    <circle cx="100" cy="100" r="88"/>
+  </clipPath>
+</defs>
+
+  <circle cx="100" cy="100" r="96" fill="url(#tealGrad)"/>
+  
+<g clip-path="url(#circleClip)">
+  <!-- Base fill inside circle -->
+  <rect x="0" y="0" width="200" height="200" fill="url(#tealGrad)"/>
+  <!-- Dark wave bands -->
+  <path d="M-10 118 C 35 92, 75 92, 120 118 C 155 138, 185 140, 230 120 L 230 162 L -10 162 Z"
+        fill="#0B6F79" opacity="0.95"/>
+  <path d="M-10 148 C 40 126, 80 126, 130 148 C 160 162, 190 164, 230 150 L 230 190 L -10 190 Z"
+        fill="#074D57" opacity="0.95"/>
+  <!-- White highlight crest -->
+  <path d="M-10 88 C 30 66, 70 66, 112 88 C 145 106, 176 108, 230 88 L 230 108 C 176 128, 145 126, 112 108 C 70 86, 30 86, -10 108 Z"
+        fill="#FFFFFF" opacity="0.95"/>
+</g>
+
+  <path d="M74 108 L93 126 L146 72"
+        fill="none" stroke="#F7C948" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

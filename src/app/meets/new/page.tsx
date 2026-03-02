@@ -1,5 +1,6 @@
 "use client";
 
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";

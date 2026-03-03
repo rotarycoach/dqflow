@@ -450,7 +450,7 @@ const watchingCount = role === "parent" ? parentRaceKeys.length : 0;
     <div className="mt-3 space-y-3 text-sm text-slate-200">
       <div>You’ll only see DQs for <span className="font-semibold text-white">your team</span>.</div>
       <div>Tap a DQ row to view details.</div>
-      <div>Follow up with the swimmer/parents for next steps.</div>
+      <div>Follow up with the swimmer/parents/oficials for next steps.</div>
     </div>
   ) : role === "parent" ? (
     <div className="mt-3 space-y-3 text-sm text-slate-200">

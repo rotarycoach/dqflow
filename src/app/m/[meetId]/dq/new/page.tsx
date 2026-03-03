@@ -9,8 +9,9 @@ import {
   doc,
   getDoc,
   serverTimestamp,
-  setDoc,
+  writeBatch,
 } from "firebase/firestore";
+
 import { db } from "@/lib/firebase";
 import { ensureAnonUser } from "@/lib/ensureAnonUser";
 import AppHeader from "@/components/AppHeader";
@@ -125,103 +126,85 @@ useEffect(() => {
 ]);
 
 
-  async function onSubmit() {
+async function onSubmit() {
+  if (!meetId) return;
+  setSaving(true);
+  setError(null);
 
-    console.log("🟣 NEW DQ PAGE VERSION 2026-03-03-B");
-    console.log("SUBMIT CLICKED");
+  try {
+    const user = await ensureAnonUser();
+    const uid = user.uid;
 
+    // (optional) subscription check can stay, but you don't use subSnap right now
+    // const subRef = doc(db, `meets/${meetId}/subscriptions/${uid}`);
+    // const subSnap = await getDoc(subRef);
 
-    if (!meetId) return;
-    setSaving(true);
-    setError(null);
+    const raceKey = `${eventNumber.trim()}-${heatNumber.trim()}-${laneNumber.trim()}`;
 
-    try {
-      const user = await ensureAnonUser();
-      const uid = user.uid;
-      console.log("NEW DQ uid:", uid);
+    const infractions = Object.entries(checks)
+      .filter(([, v]) => v)
+      .map(([k]) => {
+        const [stroke, phase, code] = k.split("|");
+        return { stroke, phase, code };
+      });
 
-const subRef = doc(db, `meets/${meetId}/subscriptions/${uid}`);
-const subSnap = await getDoc(subRef);
-console.log("NEW DQ subscription exists?", subSnap.exists(), subSnap.data());
-      const raceKey = `${eventNumber.trim()}-${heatNumber.trim()}-${laneNumber.trim()}`;
+    const slipText = Object.entries(textFields)
+      .map(([k, v]) => ({ key: k, value: v.trim() }))
+      .filter((x) => x.value.length > 0);
 
-      const infractions = Object.entries(checks)
-  .filter(([, v]) => v)
-  .map(([k]) => {
-    const [stroke, phase, code] = k.split("|");
-    return { stroke, phase, code };
-  });
+    const slipExtra = Object.entries(extraFields)
+      .map(([k, v]) => ({ key: k, value: v.trim() }))
+      .filter((x) => x.value.length > 0);
 
-const slipText = Object.entries(textFields)
-  .map(([k, v]) => ({ key: k, value: v.trim() }))
-  .filter((x) => x.value.length > 0);
+    const dqId = crypto.randomUUID();
 
-const slipExtra = Object.entries(extraFields)
-  .map(([k, v]) => ({ key: k, value: v.trim() }))
-  .filter((x) => x.value.length > 0);
+    const batch = writeBatch(db);
 
+    batch.set(doc(db, `meets/${meetId}/dq_reports/${dqId}`), {
+      createdByUid: uid,
+      infractions,
+      recorded: false,
+      recordedAt: null,
+      recordedByUid: null,
 
-     const dqId = crypto.randomUUID();
+      slipText,
+      notifiedSwimmer,
+      notifiedCoach,
+      slipExtra,
 
-// 1) Try public write first
-try {
-  await setDoc(doc(db, `meets/${meetId}/dq_reports/${dqId}`), {
-    createdByUid: uid,
-    infractions,
-    recorded: false,
-    recordedAt: null,
-    recordedByUid: null,
+      teamNameRaw: teamName.trim() || null,
+      teamNameNorm: teamName.trim() ? teamName.trim().toUpperCase() : null,
 
-    slipText,
-    notifiedSwimmer,
-    notifiedCoach,
-    slipExtra,
+      judgeName: judgeName.trim() || null,
+      cjInitials: cjInitials.trim().toUpperCase() || null,
+      refereeName: refereeName.trim() || null,
 
-    teamNameRaw: teamName.trim() || null,
-    teamNameNorm: teamName.trim() ? teamName.trim().toUpperCase() : null,
+      createdAt: serverTimestamp(),
+      eventNumber: eventNumber.trim(),
+      heatNumber: heatNumber.trim(),
+      laneNumber: laneNumber.trim(),
+      raceKey,
+      swimmerName: swimmerName.trim() || null,
+      teamName: teamName.trim() || null,
+      notes: notes.trim() || null,
+    });
 
-    judgeName: judgeName.trim() || null,
-    cjInitials: cjInitials.trim().toUpperCase() || null,
-    refereeName: refereeName.trim() || null,
+    batch.set(doc(db, `meets/${meetId}/dq_private/${dqId}`), {
+      createdByUid: uid,
+      createdAt: serverTimestamp(),
+      judgeName: judgeName.trim() || null,
+      cjInitials: cjInitials.trim().toUpperCase() || null,
+    });
 
-    createdAt: serverTimestamp(),
-    eventNumber: eventNumber.trim(),
-    heatNumber: heatNumber.trim(),
-    laneNumber: laneNumber.trim(),
-    raceKey,
-    swimmerName: swimmerName.trim() || null,
-    teamName: teamName.trim() || null,
-    notes: notes.trim() || null,
-  });
+    await batch.commit();
 
-  console.log("✅ dq_reports create OK", dqId);
-} catch (e: any) {
-  console.error("❌ dq_reports create FAILED", { code: e?.code, message: e?.message });
-  throw e;
-}
-
-// 2) Then try private write
-try {
-  await setDoc(doc(db, `meets/${meetId}/dq_private/${dqId}`), {
-    createdByUid: uid,
-    createdAt: serverTimestamp(),
-    judgeName: judgeName.trim() || null,
-    cjInitials: cjInitials.trim() || null,
-  });
-
-  console.log("✅ dq_private create OK", dqId);
-} catch (e: any) {
-  console.error("❌ dq_private create FAILED", { code: e?.code, message: e?.message });
-  throw e;
-}
-
-router.push(`/m/${meetId}`);
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to submit DQ.");
-    } finally {
-      setSaving(false);
-    }
+    router.push(`/m/${meetId}`);
+  } catch (e: any) {
+    setError(e?.message ?? "Failed to submit DQ.");
+  } finally {
+    setSaving(false);
   }
+}
 
   if (!meetId) return null;
 

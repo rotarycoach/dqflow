@@ -17,6 +17,7 @@ import {
 import { db } from "@/lib/firebase";
 import AppHeader from "@/components/AppHeader";
 import { ensureAnonUser } from "@/lib/ensureAnonUser";
+import {getDoc } from "firebase/firestore"
 
 type Meet = {
   name: string;
@@ -40,6 +41,9 @@ function makeRaceKey(eventNumber: string, heatNumber: string, laneNumber: string
 }
 
 export default function JoinMeetPage() {
+
+  console.log("✅ JOIN PAGE RENDER");
+
   const params = useParams<{ code: string }>();
   const meetCodeRaw = params?.code ?? "";
   const meetCode = useMemo(() => decodeURIComponent(meetCodeRaw).trim(), [meetCodeRaw]);
@@ -130,6 +134,7 @@ const readyFromLink = !urlRole || (role === urlRole && joinToken === urlToken);
 
 
   async function onJoin() {
+     console.log("✅ JOIN CLICK");
   if (!meetId) return;
   setSaving(true);
   setError(null);
@@ -159,36 +164,51 @@ const payload = {
 
 const subRef = doc(db, `meets/${meetId}/subscriptions/${uid}`);
 
-console.log("JOIN DEBUG", { meetId, roleToWrite, tokenToWrite, payload, path: subRef.path });
+console.error("🟥 JOIN CLICK reached write section");
 
-await setDoc(subRef, payload, { merge: true });
+try {
+  console.error("🟥 JOIN BEFORE setDoc", { path: subRef.path, payload });
+  await setDoc(subRef, payload, { merge: true });
+  console.error("🟩 JOIN AFTER setDoc (write succeeded)", subRef.path);
 
-console.log("✅ JOIN: subscription write OK", subRef.path);
+  // Verify it really exists (this is huge for permissions debugging)
+  const verify = await getDoc(subRef);
+  console.error("🟦 JOIN VERIFY getDoc exists?", verify.exists(), verify.data());
+} catch (e: any) {
+  console.error("❌ JOIN WRITE FAILED", {
+    path: subRef.path,
+    code: e?.code,
+    message: e?.message,
+    name: e?.name,
+  });
+  throw e;
+}
 
-    // Parent watch items
-    if (roleToWrite === "parent") {
-      const valid = watchItems
-        .filter((w) => w.event.trim() && w.heat.trim() && w.lane.trim())
-        .map((w) => ({
-          eventNumber: w.event.trim(),
-          heatNumber: w.heat.trim(),
-          laneNumber: w.lane.trim(),
-          raceKey: makeRaceKey(w.event, w.heat, w.lane),
-          meetId,
-          createdAt: serverTimestamp(),
-        }));
+// Parent watch items
+if (roleToWrite === "parent") {
+  const valid = watchItems
+    .filter((w) => w.event.trim() && w.heat.trim() && w.lane.trim())
+    .map((w) => ({
+      eventNumber: w.event.trim(),
+      heatNumber: w.heat.trim(),
+      laneNumber: w.lane.trim(),
+      raceKey: makeRaceKey(w.event, w.heat, w.lane),
+      meetId,
+      createdAt: serverTimestamp(),
+    }));
 
-      for (const item of valid) {
-        await setDoc(
-          doc(db, `meets/${meetId}/parentWatchlists/${uid}/watchItems/${item.raceKey}`),
-          item,
-          { merge: true }
-        );
-      }
-    }
+  for (const item of valid) {
+    await setDoc(
+      doc(db, `meets/${meetId}/parentWatchlists/${uid}/watchItems/${item.raceKey}`),
+      item,
+      { merge: true }
+    );
+  }
+}
 
-    setSuccess("Joined! Redirecting…");
-    window.location.href = `/m/${meetId}`;
+    
+    //window.location.href = `/m/${meetId}`;
+setSuccess("Joined! Redirecting…");
   } catch (e: any) {
     setError(e?.message ?? "Failed to join.");
   } finally {

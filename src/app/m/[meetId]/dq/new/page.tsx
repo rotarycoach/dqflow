@@ -134,6 +134,11 @@ useEffect(() => {
     try {
       const user = await ensureAnonUser();
       const uid = user.uid;
+      console.log("NEW DQ uid:", uid);
+
+const subRef = doc(db, `meets/${meetId}/subscriptions/${uid}`);
+const subSnap = await getDoc(subRef);
+console.log("NEW DQ subscription exists?", subSnap.exists(), subSnap.data());
       const raceKey = `${eventNumber.trim()}-${heatNumber.trim()}-${laneNumber.trim()}`;
 
       const infractions = Object.entries(checks)

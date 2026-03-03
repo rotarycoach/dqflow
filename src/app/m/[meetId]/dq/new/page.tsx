@@ -126,6 +126,8 @@ useEffect(() => {
 
 
   async function onSubmit() {
+
+    console.log("🟣 NEW DQ PAGE VERSION 2026-03-03-B");
     console.log("SUBMIT CLICKED");
 
 

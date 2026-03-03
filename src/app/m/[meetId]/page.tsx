@@ -216,7 +216,7 @@ useEffect(() => {
 
   // PARENT: read only watched raceKeys
   if (role === "parent") {
-    const keys = parentRaceKeys.slice(0, 30); // Firestore 'in' max = 30
+    const keys = parentRaceKeys.slice(0, 10); // Firestore 'in' max = 10
     if (keys.length === 0) {
       setDqPublic([]);
       return;

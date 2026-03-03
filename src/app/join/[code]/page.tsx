@@ -121,7 +121,7 @@ const readyFromLink = !urlRole || (role === urlRole && joinToken === urlToken);
 
   if (!joinToken) return false;
 
-  if (role === "coach") return teamName.trim().length > 0;
+  if (role === "coach") return teamName.trim().length > 0 && joinToken.trim().length > 0;
   if (role === "parent") {
     return watchItems.some((w) => w.event.trim() && w.heat.trim() && w.lane.trim());
   }
@@ -130,25 +130,18 @@ const readyFromLink = !urlRole || (role === urlRole && joinToken === urlToken);
 
 
   async function onJoin() {
-    if (!meetId) return;
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
+  if (!meetId) return;
+  setSaving(true);
+  setError(null);
+  setSuccess(null);
 
-    try {
-      const user = await ensureAnonUser();
-      console.log("JOIN PAGE UID:", user.uid);
-
-      const uid = user.uid;
-
-    // 1) Write subscription doc (ALWAYS write joinToken; clear coach fields unless coach)
-const coachTeamRaw = role === "coach" ? teamName.trim() : null;
-const coachTeamNorm = role === "coach" && coachTeamRaw ? normalizeTeamName(coachTeamRaw) : null;
+  try {
+    const user = await ensureAnonUser();
+const uid = user.uid;
 
 const roleToWrite: Role = urlRole ?? role;
-const tokenToWrite: string = urlToken || joinToken; // prefer URL token
+const tokenToWrite: string = urlToken || joinToken;
 
-// extra safety: if role is locked from URL, do NOT allow mismatch
 if (urlRole && roleToWrite !== urlRole) {
   throw new Error("Role mismatch (URL role not applied yet). Refresh and try again.");
 }
@@ -156,68 +149,52 @@ if (!tokenToWrite) {
   throw new Error("Missing token in join link.");
 }
 
-console.log("JOIN DEBUG", {
-  meetId,
-  urlRole,
-  urlToken,
-  roleState: role,
-  joinTokenState: joinToken,
-  roleToWrite,
-  tokenToWrite,
-});
-
 const payload = {
   role: roleToWrite,
   joinToken: tokenToWrite,
   createdAt: serverTimestamp(),
   coachTeamRaw: roleToWrite === "coach" ? teamName.trim() : null,
-  coachTeamNorm:
-    roleToWrite === "coach" ? normalizeTeamName(teamName.trim()) : null,
+  coachTeamNorm: roleToWrite === "coach" ? normalizeTeamName(teamName.trim()) : null,
 };
 
-const path = `meets/${meetId}/subscriptions/${uid}`;
+const subRef = doc(db, `meets/${meetId}/subscriptions/${uid}`);
 
-console.log("JOIN WRITE PATH:", path);
-console.log("JOIN WRITE PAYLOAD:", payload);
+console.log("JOIN DEBUG", { meetId, roleToWrite, tokenToWrite, payload, path: subRef.path });
 
-await setDoc(doc(db, path), payload, { merge: true });
+await setDoc(subRef, payload, { merge: true });
 
+console.log("✅ JOIN: subscription write OK", subRef.path);
 
+    // Parent watch items
+    if (roleToWrite === "parent") {
+      const valid = watchItems
+        .filter((w) => w.event.trim() && w.heat.trim() && w.lane.trim())
+        .map((w) => ({
+          eventNumber: w.event.trim(),
+          heatNumber: w.heat.trim(),
+          laneNumber: w.lane.trim(),
+          raceKey: makeRaceKey(w.event, w.heat, w.lane),
+          meetId,
+          createdAt: serverTimestamp(),
+        }));
 
-      
-
-      if (role === "parent") {
-        const valid = watchItems
-          .filter((w) => w.event.trim() && w.heat.trim() && w.lane.trim())
-          .map((w) => ({
-            eventNumber: w.event.trim(),
-            heatNumber: w.heat.trim(),
-            laneNumber: w.lane.trim(),
-            raceKey: makeRaceKey(w.event, w.heat, w.lane),
-            
-            meetId,
-            createdAt: serverTimestamp(),
-          }));
-
-        // Write each as its own doc (unlimited)
-        for (const item of valid) {
-  await setDoc(
-    doc(db, `meets/${meetId}/parentWatchlists/${uid}/watchItems/${item.raceKey}`),
-    item,
-    { merge: true }
-  );
-}
+      for (const item of valid) {
+        await setDoc(
+          doc(db, `meets/${meetId}/parentWatchlists/${uid}/watchItems/${item.raceKey}`),
+          item,
+          { merge: true }
+        );
       }
-
-      setSuccess("Joined! Redirecting…");
-window.location.href = `/m/${meetId}`;
-
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to join.");
-    } finally {
-      setSaving(false);
     }
+
+    setSuccess("Joined! Redirecting…");
+    window.location.href = `/m/${meetId}`;
+  } catch (e: any) {
+    setError(e?.message ?? "Failed to join.");
+  } finally {
+    setSaving(false);
   }
+}
 
   function updateWatchItem(idx: number, patch: Partial<(typeof watchItems)[number]>) {
     setWatchItems((prev) => prev.map((w, i) => (i === idx ? { ...w, ...patch } : w)));

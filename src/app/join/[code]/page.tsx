@@ -91,16 +91,21 @@ const [joinToken, setJoinToken] = useState<string>(urlToken);
       setSuccess(null);
       try {
         const qy = query(
-          collection(db, "meets"),
-          where("meetCode", "==", meetCode),
-          limit(1)
-        );
-        const snap = await getDocs(qy);
-        if (snap.empty) throw new Error("Meet not found. Check the code and try again.");
+  collection(db, "meets"),
+  where("meetCode", "==", meetCode)
+);
 
-        const d = snap.docs[0];
-        setMeetId(d.id);
-        setMeet(d.data() as Meet);
+const snap = await getDocs(qy);
+if (snap.empty) throw new Error("Meet not found.");
+
+if (snap.docs.length > 1) {
+  console.error("❌ DUPLICATE meetCode docs:", snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  throw new Error(`Multiple meets found for code ${meetCode}. Delete duplicates in Firestore.`);
+}
+
+const d = snap.docs[0];
+setMeetId(d.id);
+setMeet(d.data() as Meet);
       } catch (e: any) {
         setError(e?.message ?? "Failed to load meet.");
       } finally {
@@ -168,6 +173,15 @@ console.error("🟥 JOIN CLICK reached write section");
 
 try {
   console.error("🟥 JOIN BEFORE setDoc", { path: subRef.path, payload });
+const meetRef = doc(db, "meets", meetId);
+const meetSnap = await getDoc(meetRef);
+console.error("MEET JOIN TOKENS DEBUG", meetId, meetSnap.data()?.joinTokens);
+console.log("JOIN user.uid", uid);
+console.log("JOIN subRef.uid from path", subRef.id); // should equal uid
+console.log("JOIN payload.role", payload.role);
+console.log("JOIN payload.joinToken length", payload.joinToken?.length, payload.joinToken);
+console.log("JOIN payload.coachTeamNorm", payload.coachTeamNorm);
+
   await setDoc(subRef, payload, { merge: true });
   console.error("🟩 JOIN AFTER setDoc (write succeeded)", subRef.path);
 

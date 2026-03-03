@@ -173,9 +173,24 @@ const subRef = doc(db, `meets/${meetId}/subscriptions/${uid}`);
 
 console.error("🟥 JOIN CLICK reached write section");
 console.error("🟥 JOIN BEFORE setDoc", { path: subRef.path, payload });
+console.log("JOIN UID (before existing check):", uid);
 
 // ✅ If already joined, don’t write again—just redirect
-const existing = await getDoc(subRef);
+let existing;
+try {
+  console.log("🟨 JOIN existing getDoc: about to read", subRef.path);
+  existing = await getDoc(subRef);
+  console.log("🟩 JOIN existing getDoc: OK. exists=", existing.exists());
+} catch (e: any) {
+  console.error("❌ JOIN existing getDoc FAILED", {
+    path: subRef.path,
+    code: e?.code,
+    message: e?.message,
+    name: e?.name,
+  });
+  throw e; // let your outer catch handle the UI error
+}
+
 if (existing.exists()) {
   console.log("✅ JOIN: subscription already exists, skipping write", subRef.path);
   setSuccess("Already joined. Redirecting…");

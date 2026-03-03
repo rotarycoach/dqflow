@@ -46,6 +46,8 @@ export default function JoinMeetPage() {
   console.log("✅ JOIN PAGE RENDER");
   const router = useRouter();
 
+console.log("🟣 JOIN PAGE VERSION: 2026-03-03-A");
+
 console.log("🌐 HOST DEBUG", {
   href: typeof window !== "undefined" ? window.location.href : "",
   host: typeof window !== "undefined" ? window.location.host : "",
@@ -104,16 +106,27 @@ const [joinToken, setJoinToken] = useState<string>(urlToken);
     setSuccess(null);
 
     try {
-      // ✅ IMPORTANT: ensure auth exists BEFORE Firestore reads
-      const user = await ensureAnonUser();
-      console.log("✅ JOIN ensureAnonUser uid:", user.uid);
+      console.log("🟡 JOIN: about to ensureAnonUser…");
 
-      const qy = query(
-        collection(db, "meets"),
-        where("meetCode", "==", meetCode)
-      );
+      let user;
+      try {
+        user = await ensureAnonUser();
+        console.log("🟢 JOIN: ensureAnonUser OK uid:", user.uid);
+      } catch (e: any) {
+        console.error("🔴 JOIN: ensureAnonUser FAILED", {
+          code: e?.code,
+          message: e?.message,
+          name: e?.name,
+        });
+        throw e;
+      }
 
+      console.log("🟡 JOIN: about to query meet by meetCode:", meetCode);
+
+      const qy = query(collection(db, "meets"), where("meetCode", "==", meetCode));
       const snap = await getDocs(qy);
+
+      console.log("🟢 JOIN: meet query OK docs:", snap.docs.length);
 
       if (snap.empty) throw new Error("Meet not found.");
 
@@ -127,7 +140,11 @@ const [joinToken, setJoinToken] = useState<string>(urlToken);
       setMeet(d.data() as Meet);
 
     } catch (e: any) {
-      console.error("❌ JOIN meet load failed:", e?.code, e?.message);
+      console.error("🔴 JOIN: meet load FAILED", {
+        code: e?.code,
+        message: e?.message,
+        name: e?.name,
+      });
       setError(e?.message ?? "Failed to load meet.");
     } finally {
       setLoading(false);

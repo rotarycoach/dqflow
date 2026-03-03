@@ -95,37 +95,45 @@ const [joinToken, setJoinToken] = useState<string>(urlToken);
   const [success, setSuccess] = useState<string | null>(null);
 
   // Load meet by code
-  useEffect(() => {
-    if (!meetCode) return;
+ useEffect(() => {
+  if (!meetCode) return;
 
-    (async () => {
-      setLoading(true);
-      setError(null);
-      setSuccess(null);
-      try {
-        const qy = query(
-  collection(db, "meets"),
-  where("meetCode", "==", meetCode)
-);
+  (async () => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
 
-const snap = await getDocs(qy);
-if (snap.empty) throw new Error("Meet not found.");
+    try {
+      // ✅ IMPORTANT: ensure auth exists BEFORE Firestore reads
+      const user = await ensureAnonUser();
+      console.log("✅ JOIN ensureAnonUser uid:", user.uid);
 
-if (snap.docs.length > 1) {
-  console.error("❌ DUPLICATE meetCode docs:", snap.docs.map(d => ({ id: d.id, ...d.data() })));
-  throw new Error(`Multiple meets found for code ${meetCode}. Delete duplicates in Firestore.`);
-}
+      const qy = query(
+        collection(db, "meets"),
+        where("meetCode", "==", meetCode)
+      );
 
-const d = snap.docs[0];
-setMeetId(d.id);
-setMeet(d.data() as Meet);
-      } catch (e: any) {
-        setError(e?.message ?? "Failed to load meet.");
-      } finally {
-        setLoading(false);
+      const snap = await getDocs(qy);
+
+      if (snap.empty) throw new Error("Meet not found.");
+
+      if (snap.docs.length > 1) {
+        console.error("❌ DUPLICATE meetCode docs:", snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        throw new Error(`Multiple meets found for code ${meetCode}. Delete duplicates in Firestore.`);
       }
-    })();
-  }, [meetCode]);
+
+      const d = snap.docs[0];
+      setMeetId(d.id);
+      setMeet(d.data() as Meet);
+
+    } catch (e: any) {
+      console.error("❌ JOIN meet load failed:", e?.code, e?.message);
+      setError(e?.message ?? "Failed to load meet.");
+    } finally {
+      setLoading(false);
+    }
+  })();
+}, [meetCode]);
 
   useEffect(() => {
   // Keep state synced if URL changes (rare but safe)

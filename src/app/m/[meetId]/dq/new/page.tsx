@@ -9,11 +9,13 @@ import {
   doc,
   getDoc,
   serverTimestamp,
-  writeBatch,
+  setDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { ensureAnonUser } from "@/lib/ensureAnonUser";
 import AppHeader from "@/components/AppHeader";
+
+
 
 type Role = "official" | "coach" | "parent";
 
@@ -157,56 +159,61 @@ const slipExtra = Object.entries(extraFields)
   .filter((x) => x.value.length > 0);
 
 
-      const dqId = crypto.randomUUID();
+     const dqId = crypto.randomUUID();
 
-      const batch = writeBatch(db);
+// 1) Try public write first
+try {
+  await setDoc(doc(db, `meets/${meetId}/dq_reports/${dqId}`), {
+    createdByUid: uid,
+    infractions,
+    recorded: false,
+    recordedAt: null,
+    recordedByUid: null,
 
+    slipText,
+    notifiedSwimmer,
+    notifiedCoach,
+    slipExtra,
 
+    teamNameRaw: teamName.trim() || null,
+    teamNameNorm: teamName.trim() ? teamName.trim().toUpperCase() : null,
 
+    judgeName: judgeName.trim() || null,
+    cjInitials: cjInitials.trim().toUpperCase() || null,
+    refereeName: refereeName.trim() || null,
 
-      // public
-      batch.set(doc(db, `meets/${meetId}/dq_reports/${dqId}`), {
-        createdByUid: uid,
-        infractions,
-        recorded: false,
-recordedAt: null,
-recordedByUid: null,
+    createdAt: serverTimestamp(),
+    eventNumber: eventNumber.trim(),
+    heatNumber: heatNumber.trim(),
+    laneNumber: laneNumber.trim(),
+    raceKey,
+    swimmerName: swimmerName.trim() || null,
+    teamName: teamName.trim() || null,
+    notes: notes.trim() || null,
+  });
 
-slipText,
-notifiedSwimmer,
-  notifiedCoach,
-slipExtra,
-teamNameRaw: teamName.trim() || null,
-teamNameNorm: teamName.trim().toUpperCase(), 
-judgeName: judgeName.trim() || null,
-cjInitials: cjInitials.trim().toUpperCase() || null,
-refereeName: refereeName.trim() || null,
+  console.log("✅ dq_reports create OK", dqId);
+} catch (e: any) {
+  console.error("❌ dq_reports create FAILED", { code: e?.code, message: e?.message });
+  throw e;
+}
 
+// 2) Then try private write
+try {
+  await setDoc(doc(db, `meets/${meetId}/dq_private/${dqId}`), {
+    createdByUid: uid,
+    createdAt: serverTimestamp(),
+    judgeName: judgeName.trim() || null,
+    cjInitials: cjInitials.trim() || null,
+  });
 
+  console.log("✅ dq_private create OK", dqId);
+} catch (e: any) {
+  console.error("❌ dq_private create FAILED", { code: e?.code, message: e?.message });
+  throw e;
+}
 
-        createdAt: serverTimestamp(),
-        eventNumber: eventNumber.trim(),
-        heatNumber: heatNumber.trim(),
-        laneNumber: laneNumber.trim(),
-        raceKey,
-        swimmerName: swimmerName.trim() || null,
-        teamName: teamName.trim() || null,
-        
-        
-        notes: notes.trim() || null,
-      });
-
-      // private (initials)
-      batch.set(doc(db, `meets/${meetId}/dq_private/${dqId}`), {
-        createdByUid: uid,
-        createdAt: serverTimestamp(),
-        judgeName: judgeName.trim() || null,
-        cjInitials: cjInitials.trim() || null,
-
-      });
-
-      await batch.commit();
-      router.push(`/m/${meetId}`);
+router.push(`/m/${meetId}`);
     } catch (e: any) {
       setError(e?.message ?? "Failed to submit DQ.");
     } finally {

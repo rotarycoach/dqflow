@@ -270,11 +270,13 @@ export default function JoinMeetPage() {
                   <div className="text-sm font-semibold text-slate-900">Coach setup</div>
                   <div className="mt-2 text-sm text-slate-600">Select or type your team name.</div>
                   <input
-                    className="mt-3 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none ring-cyan-400/40 focus:ring-4"
-                    value={teamName}
-                    onChange={(e) => setTeamName(e.target.value)}
-                    placeholder="e.g., GOLD"
-                  />
+  className="mt-3 w-full rounded-xl border border-slate-200 px-4 py-3
+             text-slate-900 placeholder:text-slate-400
+             outline-none ring-cyan-400/40 focus:ring-4"
+  value={teamName}
+  onChange={(e) => setTeamName(e.target.value)}
+  placeholder="e.g., GOLD"
+/>
                   <div className="mt-2 text-xs text-slate-500">Matching is case-insensitive.</div>
                 </div>
               )}
@@ -290,19 +292,21 @@ export default function JoinMeetPage() {
                     {watchItems.map((w, idx) => (
                       <div key={idx} className="grid grid-cols-12 gap-2">
                         <input
-                          className="col-span-4 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none ring-cyan-400/30 focus:ring-4"
-                          value={w.event}
-                          onChange={(e) => updateWatchItem(idx, { event: e.target.value })}
-                          placeholder="Event"
-                        />
+  className="col-span-4 rounded-xl border border-slate-200 px-3 py-2 text-sm
+             text-slate-900 placeholder:text-slate-400
+             outline-none ring-cyan-400/30 focus:ring-4"
+  value={w.event}
+  onChange={(e) => updateWatchItem(idx, { event: e.target.value })}
+  placeholder="Event"
+/>
                         <input
-                          className="col-span-4 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none ring-cyan-400/30 focus:ring-4"
+                          className="col-span-4 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none ring-cyan-400/30 focus:ring-4"
                           value={w.heat}
                           onChange={(e) => updateWatchItem(idx, { heat: e.target.value })}
                           placeholder="Heat"
                         />
                         <input
-                          className="col-span-4 rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none ring-cyan-400/30 focus:ring-4"
+                          className="col-span-4 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none ring-cyan-400/30 focus:ring-4"
                           value={w.lane}
                           onChange={(e) => updateWatchItem(idx, { lane: e.target.value })}
                           placeholder="Lane"

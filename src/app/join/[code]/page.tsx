@@ -17,7 +17,7 @@ import {
 } from "firebase/firestore";
 
 
-
+console.log("FIREBASE projectId:", (db as any).app?.options?.projectId);
 
 
 type Meet = {
@@ -45,6 +45,17 @@ export default function JoinMeetPage() {
 
   console.log("✅ JOIN PAGE RENDER");
   const router = useRouter();
+
+console.log("🌐 HOST DEBUG", {
+  href: typeof window !== "undefined" ? window.location.href : "",
+  host: typeof window !== "undefined" ? window.location.host : "",
+  origin: typeof window !== "undefined" ? window.location.origin : "",
+});
+
+console.log("🔥 FIREBASE DEBUG", {
+  projectId: (db as any)?.app?.options?.projectId,
+  appId: (db as any)?.app?.options?.appId,
+});
 
   const params = useParams<{ code: string }>();
   const meetCodeRaw = params?.code ?? "";

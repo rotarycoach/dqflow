@@ -1,23 +1,24 @@
 "use client";
 
-import Link from "next/link";
+import AppHeader from "@/components/AppHeader";
+import { ensureAnonUser } from "@/lib/ensureAnonUser";
+import { db } from "@/lib/firebase";
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
-  limit,
   query,
   setDoc,
-  where,
   serverTimestamp,
-  
+  where,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import AppHeader from "@/components/AppHeader";
-import { ensureAnonUser } from "@/lib/ensureAnonUser";
-import {getDoc } from "firebase/firestore"
+
+
+
+
 
 type Meet = {
   name: string;
@@ -43,6 +44,7 @@ function makeRaceKey(eventNumber: string, heatNumber: string, laneNumber: string
 export default function JoinMeetPage() {
 
   console.log("✅ JOIN PAGE RENDER");
+  const router = useRouter();
 
   const params = useParams<{ code: string }>();
   const meetCodeRaw = params?.code ?? "";
@@ -170,22 +172,27 @@ const payload = {
 const subRef = doc(db, `meets/${meetId}/subscriptions/${uid}`);
 
 console.error("🟥 JOIN CLICK reached write section");
+console.error("🟥 JOIN BEFORE setDoc", { path: subRef.path, payload });
 
-try {
-  console.error("🟥 JOIN BEFORE setDoc", { path: subRef.path, payload });
+// ✅ If already joined, don’t write again—just redirect
+const existing = await getDoc(subRef);
+if (existing.exists()) {
+  console.log("✅ JOIN: subscription already exists, skipping write", subRef.path);
+  setSuccess("Already joined. Redirecting…");
+  router.replace(`/m/${meetId}`);
+  setTimeout(() => window.location.assign(`/m/${meetId}`), 800);
+  return;
+}
+
+// (optional debug)
 const meetRef = doc(db, "meets", meetId);
 const meetSnap = await getDoc(meetRef);
 console.error("MEET JOIN TOKENS DEBUG", meetId, meetSnap.data()?.joinTokens);
-console.log("JOIN user.uid", uid);
-console.log("JOIN subRef.uid from path", subRef.id); // should equal uid
-console.log("JOIN payload.role", payload.role);
-console.log("JOIN payload.joinToken length", payload.joinToken?.length, payload.joinToken);
-console.log("JOIN payload.coachTeamNorm", payload.coachTeamNorm);
 
+try {
   await setDoc(subRef, payload, { merge: true });
   console.error("🟩 JOIN AFTER setDoc (write succeeded)", subRef.path);
 
-  // Verify it really exists (this is huge for permissions debugging)
   const verify = await getDoc(subRef);
   console.error("🟦 JOIN VERIFY getDoc exists?", verify.exists(), verify.data());
 } catch (e: any) {
@@ -221,7 +228,7 @@ if (roleToWrite === "parent") {
 }
 
     
-    //window.location.href = `/m/${meetId}`;
+  window.location.href = `/m/${meetId}`;
 setSuccess("Joined! Redirecting…");
   } catch (e: any) {
     setError(e?.message ?? "Failed to join.");
